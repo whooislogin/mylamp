@@ -1,5 +1,4 @@
 (function () {
-    // 1. Стилі: Чорний космос, золоте лого та ефекти спалаху
     var style = `
         .sw-container {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
@@ -9,8 +8,7 @@
         }
         .star {
             position: absolute; background: white; border-radius: 1px;
-            width: 2px; height: 2px;
-            left: 50%; top: 50%;
+            width: 2px; height: 2px; left: 50%; top: 50%;
             will-change: transform;
         }
         .sw-logo {
@@ -44,84 +42,58 @@
     styleTag.innerHTML = style;
     document.head.appendChild(styleTag);
 
-    // 2. Створення структури елементів
     var container = document.createElement('div');
     container.className = 'sw-container';
-    
     var logo = document.createElement('div');
     logo.className = 'sw-logo';
     logo.innerText = 'LAMPA';
-    
     var flash = document.createElement('div');
     flash.className = 'hyperspace-flash';
-    
     container.appendChild(logo);
     container.appendChild(flash);
     document.body.appendChild(container);
 
-    // 3. Ініціалізація зірок
     var stars = [];
-    var starCount = 120; // Оптимально для TV
+    var starCount = 120;
     var isHyperdrive = false;
 
     for (let i = 0; i < starCount; i++) {
-        let starEl = document.createElement('div');
-        starEl.className = 'star';
-        
-        // Математика напрямку: кут від центру на 360 градусів
         let angle = Math.random() * Math.PI * 2;
         let xDir = Math.cos(angle);
         let yDir = Math.sin(angle);
-        
+        let starEl = document.createElement('div');
+        starEl.className = 'star';
         stars.push({
-            el: starEl,
-            xDir: xDir,
-            yDir: yDir,
-            z: Math.random() * -1500, // Глибина появи
-            angle: angle * (180 / Math.PI) + 90 // Поворот "носом" від центру
+            el: starEl, xDir: xDir, yDir: yDir,
+            z: Math.random() * -1500,
+            angle: angle * (180 / Math.PI) + 90
         });
-        
         container.appendChild(starEl);
     }
 
-    // 4. Цикл анімації (60 FPS)
     function render() {
         stars.forEach(s => {
-            // Збільшуємо швидкість під час гіперстрибка
             s.z += isHyperdrive ? 50 : 5;
-            
-            // Якщо зірка пролетіла за "камеру", повертаємо її вглиб
             if (s.z > 1000) s.z = -1500;
-
-            // Ефект розтягування: збільшуємо масштаб по осі Y (яка розгорнута від центру)
             let stretch = isHyperdrive ? `scaleY(${25 + Math.random() * 20})` : 'scaleY(1)';
-            
-            // Розрахунок позиції (чим ближче Z, тим далі від центру x та y)
             let x = s.xDir * (s.z + 1500) * 0.7;
             let y = s.yDir * (s.z + 1500) * 0.7;
-
             s.el.style.transform = `translate3d(${x}px, ${y}px, ${s.z}px) rotate(${s.angle}deg) ${stretch}`;
         });
-
-        if (container.parentNode) {
-            requestAnimationFrame(render);
-        }
+        if (container.parentNode) requestAnimationFrame(render);
     }
     requestAnimationFrame(render);
 
-    // 5. Таймінги: Політ -> Стрибок -> Спалах -> Вихід
     setTimeout(() => {
-        isHyperdrive = true; // Активуємо розтягування та прискорення
-        container.style.filter = 'blur(1px)'; // Додаємо розмиття швидкості
-
+        isHyperdrive = true;
+        container.style.filter = 'blur(1px)';
         setTimeout(() => {
-            flash.classList.add('flash-active'); // Білий спалах
-            
+            flash.classList.add('flash-active');
             setTimeout(() => {
                 container.style.transition = 'opacity 0.6s ease-out';
                 container.style.opacity = '0';
-                setTimeout(() => container.remove(), 600); // Повне видалення
-            }, 400); // Видаляємо на піку спалаху
-        }, 800); // Тривалість самого стрибка
-    }, 2800); // Початок стрибка (синхронізовано зі зникненням лого)
+                setTimeout(() => container.remove(), 600);
+            }, 400);
+        }, 800);
+    }, 2800);
 })();
