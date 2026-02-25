@@ -87,30 +87,34 @@
         stars.push(star);
     }
 
-    // 4. Анімація зірок через RequestAnimationFrame (для плавності)
+    // 4. Анімація зірок
+    let isHyperdrive = false;
+
     function animateStars() {
         stars.forEach(star => {
             let z = parseFloat(star.dataset.z);
-            z += 4; // Швидкість польоту
-            if (z > 600) z = -1000; // Повернення зірки назад
+            z += isHyperdrive ? 40 : 5; // Якщо стрибок — швидкість зростає в 8 разів
+
+            if (z > 600) z = -1000;
             
             star.dataset.z = z;
-            star.style.transform = `translate3d(${star.dataset.x}vw, ${star.dataset.y}vh, ${z}px)`;
+            
+            // Якщо гіперстрибок — додаємо scaleY (розтягування)
+            let stretch = isHyperdrive ? 'scaleY(50)' : 'scaleY(1)';
+            star.style.transform = `translate3d(${star.dataset.x}vw, ${star.dataset.y}vh, ${z}px) ${stretch}`;
         });
+        
         if (container.parentNode) requestAnimationFrame(animateStars);
     }
     requestAnimationFrame(animateStars);
 
-    // 5. Ефект Гіперстрибка та виходу
+    // 5. Ефект Гіперстрибка
     setTimeout(() => {
-        // Розтягуємо зірки в лінії
-        stars.forEach(star => {
-            star.style.transition = 'height 0.4s ease-in, background 0.4s';
-            star.style.height = '150px'; 
-            star.style.background = 'linear-gradient(to bottom, white, transparent)';
-        });
+        isHyperdrive = true; // Вмикаємо розтягування в анімації
+        
+        // Додаємо легке розмиття для швидкості
+        container.style.filter = 'blur(1px)';
 
-        // Через 500мс робимо фінальний спалах і видаляємо заставку
         setTimeout(() => {
             flash.classList.add('flash-active');
             setTimeout(() => {
@@ -118,7 +122,6 @@
                 container.style.opacity = '0';
                 setTimeout(() => container.remove(), 500);
             }, 300);
-        }, 400);
+        }, 600); // Стрибок триває 0.6 сек
 
-    }, 2800); // Час до початку стрибка
-})();
+    }, 2800);
