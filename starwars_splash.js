@@ -1,134 +1,103 @@
 (function () {
-    // 1. СТИЛІ: Заставка + Кастомізація інтерфейсу Lampa
     var style = `
-        /* Стилі контейнера заставки */
-        .sw-container {
+        .console-container {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: #000; z-index: 99999; 
-            overflow: hidden; perspective: 1000px;
+            background: #0d0d0d; z-index: 99999;
             display: flex; align-items: center; justify-content: center;
+            font-family: 'Courier New', Courier, monospace;
         }
-        .star {
-            position: absolute; background: white; border-radius: 1px;
-            width: 2px; height: 2px; left: 50%; top: 50%;
-            will-change: transform;
+        .console-window {
+            width: 80%; max-width: 600px;
+            background: #1a1a1a; border-radius: 10px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+            overflow: hidden; border: 1px solid #333;
         }
-        .sw-logo {
-            position: relative; z-index: 10;
-            font-family: 'Arial Black', sans-serif;
-            font-size: 9vw; font-weight: bold; color: #FFE81F;
-            text-shadow: 0 0 30px rgba(255, 232, 31, 0.9);
-            transform: perspective(400px) rotateX(25deg);
-            letter-spacing: 15px;
-            animation: logoArrival 3.5s ease-in-out forwards;
+        .console-header {
+            background: #333; padding: 10px; display: flex; gap: 8px;
         }
-        @keyframes logoArrival {
-            0% { opacity: 0; transform: perspective(400px) rotateX(25deg) scale(2.5); filter: blur(10px); }
-            30% { opacity: 1; filter: blur(0px); }
-            70% { opacity: 1; }
-            100% { opacity: 0; transform: perspective(400px) rotateX(25deg) scale(0.4); }
-        }
-        .hyperspace-flash {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: white; opacity: 0; z-index: 100; pointer-events: none;
-        }
-        .flash-active { animation: flashAnim 0.8s ease-out forwards; }
-        @keyframes flashAnim { 0% { opacity: 0; } 50% { opacity: 1; } 100% { opacity: 0; } }
-
-        /* --- КАСТОМІЗАЦІЯ ІНТЕРФЕЙСУ LAMPA (Жовтий акцент) --- */
+        .dot { width: 12px; height: 12px; border-radius: 50%; }
+        .red { background: #ff5f56; } .yellow { background: #ffbd2e; } .green { background: #27c93f; }
         
-        /* Рамка виділення карток */
-        .selector--active { 
-            border: 3px solid #FFE81F !important; 
-            box-shadow: 0 0 20px rgba(255, 232, 31, 0.6) !important;
+        .console-body {
+            padding: 20px; color: #27c93f; font-size: 14px; line-height: 1.6;
         }
+        .log-line { opacity: 0; margin-bottom: 5px; }
+        .progress-wrapper {
+            margin-top: 20px; border: 1px solid #27c93f; height: 20px;
+            position: relative; overflow: hidden;
+        }
+        .progress-bar {
+            width: 0%; height: 100%; background: #27c93f;
+            transition: width 0.1s linear;
+        }
+        .cursor { display: inline-block; width: 8px; height: 15px; background: #27c93f; animation: blink 1s infinite; }
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
         
-        /* Активний пункт меню */
-        .menu__item.active { 
-            color: #FFE81F !important; 
-        }
-
-        /* Підсвітка при фокусі на кнопках */
-        .is--focus .menu__item.active, 
-        .is--focus .menu__item,
-        .is--focus .button {
-            background-color: rgba(255, 232, 31, 0.2) !important;
-        }
-
-        /* Полоски прогресу, якість та інші мітки */
-        .card__quality, 
-        .notice--orange,
-        .progressbar__fill {
-            background-color: #FFE81F !important;
-            color: #000 !important;
-        }
+        /* Золоті акценти для інтерфейсу Lampa */
+        .selector--active { border: 3px solid #27c93f !important; box-shadow: 0 0 15px rgba(39, 201, 63, 0.5) !important; }
+        .menu__item.active { color: #27c93f !important; }
     `;
 
     var styleTag = document.createElement('style');
     styleTag.innerHTML = style;
     document.head.appendChild(styleTag);
 
-    // 2. Створення структури заставки
     var container = document.createElement('div');
-    container.className = 'sw-container';
-    var logo = document.createElement('div');
-    logo.className = 'sw-logo';
-    logo.innerText = 'LAMPAS';
-    var flash = document.createElement('div');
-    flash.className = 'hyperspace-flash';
-    
-    container.appendChild(logo);
-    container.appendChild(flash);
+    container.className = 'console-container';
+    container.innerHTML = `
+        <div class="console-window">
+            <div class="console-header">
+                <div class="dot red"></div><div class="dot yellow"></div><div class="dot green"></div>
+            </div>
+            <div class="console-body" id="console-content">
+                <div id="log-container"></div>
+                <div class="progress-wrapper"><div class="progress-bar" id="pb"></div></div>
+                <p style="margin-top:10px">root@lampa:~$ <span class="cursor"></span></p>
+            </div>
+        </div>
+    `;
     document.body.appendChild(container);
 
-    // 3. Ініціалізація зірок
-    var stars = [];
-    var starCount = 120;
-    var isHyperdrive = false;
+    var logs = [
+        "> Initializing Lampa Kernel...",
+        "> Loading UI components... OK",
+        "> Connecting to secure trackers...",
+        "> Synchronizing database...",
+        "> System check: All systems green.",
+        "> Booting interface..."
+    ];
 
-    for (let i = 0; i < starCount; i++) {
-        let angle = Math.random() * Math.PI * 2;
-        let xDir = Math.cos(angle);
-        let yDir = Math.sin(angle);
-        let starEl = document.createElement('div');
-        starEl.className = 'star';
-        
-        stars.push({
-            el: starEl, xDir: xDir, yDir: yDir,
-            z: Math.random() * -1500,
-            angle: angle * (180 / Math.PI) + 90
-        });
-        container.appendChild(starEl);
+    var logContainer = document.getElementById('log-container');
+    var pb = document.getElementById('pb');
+    var currentLog = 0;
+
+    function showLogs() {
+        if (currentLog < logs.length) {
+            var line = document.createElement('div');
+            line.className = 'log-line';
+            line.style.opacity = '1';
+            line.innerText = logs[currentLog];
+            logContainer.appendChild(line);
+            currentLog++;
+            setTimeout(showLogs, 400);
+        }
     }
 
-    // 4. Анімація
-    function render() {
-        stars.forEach(s => {
-            s.z += isHyperdrive ? 55 : 5;
-            if (s.z > 1000) s.z = -1500;
-            
-            let stretch = isHyperdrive ? `scaleY(${25 + Math.random() * 25})` : 'scaleY(1)';
-            let x = s.xDir * (s.z + 1500) * 0.7;
-            let y = s.yDir * (s.z + 1500) * 0.7;
-            
-            s.el.style.transform = `translate3d(${x}px, ${y}px, ${s.z}px) rotate(${s.angle}deg) ${stretch}`;
-        });
-        if (container.parentNode) requestAnimationFrame(render);
-    }
-    requestAnimationFrame(render);
-
-    // 5. Логіка завершення
-    setTimeout(() => {
-        isHyperdrive = true;
-        container.style.filter = 'blur(1px)';
-        
-        setTimeout(() => {
-            flash.classList.add('flash-active');
-            setTimeout(() => {
-                container.style.transition = 'opacity 0.6s ease-out';
+    // Анімація прогрес-бару
+    var progress = 0;
+    var timer = setInterval(function() {
+        progress += Math.random() * 5;
+        if (progress > 100) progress = 100;
+        pb.style.width = progress + '%';
+        if (progress === 100) {
+            clearInterval(timer);
+            setTimeout(function() {
                 container.style.opacity = '0';
-                setTimeout(() => container.remove(), 600);
-            }, 400);
-        }, 850);
-    }, 2800);
+                container.style.transition = 'opacity 0.5s';
+                setTimeout(() => container.remove(), 500);
+            }, 500);
+        }
+    }, 150);
+
+    showLogs();
 })();
