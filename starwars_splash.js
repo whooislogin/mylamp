@@ -1,5 +1,14 @@
 (function () {
     var style = `
+        /* Робимо колір виділення кнопок золотим */
+       .selector--active { 
+           border-color: #FFE81F !important; 
+           box-shadow: 0 0 15px rgba(255, 232, 31, 0.5) !important;
+       }
+      /* Колір іконок меню */
+        .menu__item.active { 
+            color: #FFE81F !important; 
+        }
         .sw-container {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: #000; z-index: 99999; 
