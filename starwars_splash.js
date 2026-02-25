@@ -1,138 +1,134 @@
 (function () {
+    // 1. СТИЛІ: Заставка + Кастомізація інтерфейсу Lampa
     var style = `
-        .matrix-container {
-            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-            background: #000; z-index: 99999;
-            overflow: hidden; font-family: 'Courier New', monospace;
+        /* Стилі контейнера заставки */
+        .sw-container {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: #000; z-index: 99999; 
+            overflow: hidden; perspective: 1000px;
+            display: flex; align-items: center; justify-content: center;
         }
-        #matrix-canvas {
-            position: absolute; top: 0; left: 0; 
-            width: 100%; height: 100%;
-            z-index: 1; opacity: 0.6;
+        .star {
+            position: absolute; background: white; border-radius: 1px;
+            width: 2px; height: 2px; left: 50%; top: 50%;
+            will-change: transform;
         }
-        .console-window {
-            position: absolute; top: 50%; left: 50%;
-            transform: translate(-50%, -50%);
-            width: 85%; max-width: 550px;
-            background: rgba(10, 10, 10, 0.9);
-            border-radius: 8px; border: 1px solid #00ff41;
-            box-shadow: 0 0 40px rgba(0, 255, 65, 0.2);
-            z-index: 10; overflow: hidden;
+        .sw-logo {
+            position: relative; z-index: 10;
+            font-family: 'Arial Black', sans-serif;
+            font-size: 9vw; font-weight: bold; color: #FFE81F;
+            text-shadow: 0 0 30px rgba(255, 232, 31, 0.9);
+            transform: perspective(400px) rotateX(25deg);
+            letter-spacing: 15px;
+            animation: logoArrival 3.5s ease-in-out forwards;
         }
-        .console-header {
-            background: #222; padding: 10px; display: flex; gap: 8px;
+        @keyframes logoArrival {
+            0% { opacity: 0; transform: perspective(400px) rotateX(25deg) scale(2.5); filter: blur(10px); }
+            30% { opacity: 1; filter: blur(0px); }
+            70% { opacity: 1; }
+            100% { opacity: 0; transform: perspective(400px) rotateX(25deg) scale(0.4); }
         }
-        .dot { width: 12px; height: 12px; border-radius: 50%; }
-        .red { background: #ff5f56; } .yellow { background: #ffbd2e; } .green { background: #27c93f; }
+        .hyperspace-flash {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: white; opacity: 0; z-index: 100; pointer-events: none;
+        }
+        .flash-active { animation: flashAnim 0.8s ease-out forwards; }
+        @keyframes flashAnim { 0% { opacity: 0; } 50% { opacity: 1; } 100% { opacity: 0; } }
+
+        /* --- КАСТОМІЗАЦІЯ ІНТЕРФЕЙСУ LAMPA (Жовтий акцент) --- */
         
-        .console-body {
-            padding: 20px; color: #00ff41; font-size: 14px; line-height: 1.5;
+        /* Рамка виділення карток */
+        .selector--active { 
+            border: 3px solid #FFE81F !important; 
+            box-shadow: 0 0 20px rgba(255, 232, 31, 0.6) !important;
         }
-        .progress-wrapper {
-            margin-top: 15px; border: 1px solid #00ff41; height: 18px;
-            background: rgba(0,0,0,0.7);
-        }
-        .progress-bar {
-            width: 0%; height: 100%; background: #00ff41;
-            box-shadow: 0 0 10px #00ff41;
+        
+        /* Активний пункт меню */
+        .menu__item.active { 
+            color: #FFE81F !important; 
         }
 
-        /* Стилізація інтерфейсу Lampa */
-        .selector--active { border: 3px solid #00ff41 !important; box-shadow: 0 0 15px rgba(0, 255, 65, 0.6) !important; }
-        .menu__item.active { color: #00ff41 !important; }
+        /* Підсвітка при фокусі на кнопках */
+        .is--focus .menu__item.active, 
+        .is--focus .menu__item,
+        .is--focus .button {
+            background-color: rgba(255, 232, 31, 0.2) !important;
+        }
+
+        /* Полоски прогресу, якість та інші мітки */
+        .card__quality, 
+        .notice--orange,
+        .progressbar__fill {
+            background-color: #FFE81F !important;
+            color: #000 !important;
+        }
     `;
 
     var styleTag = document.createElement('style');
     styleTag.innerHTML = style;
     document.head.appendChild(styleTag);
 
+    // 2. Створення структури заставки
     var container = document.createElement('div');
-    container.className = 'matrix-container';
-    container.innerHTML = `
-        <canvas id="matrix-canvas"></canvas>
-        <div class="console-window">
-            <div class="console-header">
-                <div class="dot red"></div><div class="dot yellow"></div><div class="dot green"></div>
-            </div>
-            <div class="console-body">
-                <div id="matrix-logs"></div>
-                <div class="progress-wrapper"><div class="progress-bar" id="matrix-pb"></div></div>
-                <p style="margin-top:10px">root@lampa:~$ <span id="matrix-status">initializing...</span></p>
-            </div>
-        </div>
-    `;
+    container.className = 'sw-container';
+    var logo = document.createElement('div');
+    logo.className = 'sw-logo';
+    logo.innerText = 'LAMPAS';
+    var flash = document.createElement('div');
+    flash.className = 'hyperspace-flash';
+    
+    container.appendChild(logo);
+    container.appendChild(flash);
     document.body.appendChild(container);
 
-    // --- ЛОГІКА МАТРИЦІ ---
-    var canvas = document.getElementById('matrix-canvas');
-    var ctx = canvas.getContext('2d');
+    // 3. Ініціалізація зірок
+    var stars = [];
+    var starCount = 120;
+    var isHyperdrive = false;
 
-    // Налаштування розміру
-    function resize() {
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
+    for (let i = 0; i < starCount; i++) {
+        let angle = Math.random() * Math.PI * 2;
+        let xDir = Math.cos(angle);
+        let yDir = Math.sin(angle);
+        let starEl = document.createElement('div');
+        starEl.className = 'star';
+        
+        stars.push({
+            el: starEl, xDir: xDir, yDir: yDir,
+            z: Math.random() * -1500,
+            angle: angle * (180 / Math.PI) + 90
+        });
+        container.appendChild(starEl);
     }
-    resize();
-    window.addEventListener('resize', resize);
 
-    var latin = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-    var nums = "0123456789";
-    var alphabet = latin + nums;
-    var fontSize = 16;
-    var columns = canvas.width / fontSize;
-    var drops = [];
-    for (var x = 0; x < columns; x++) drops[x] = 1;
-
-    function draw() {
-        // Напівпрозорий чорний фон для ефекту "хвоста"
-        ctx.fillStyle = "rgba(0, 0, 0, 0.05)";
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-        ctx.fillStyle = "#0F0"; // Яскраво-зелений
-        ctx.font = fontSize + "px arial";
-
-        for (var i = 0; i < drops.length; i++) {
-            var text = alphabet.charAt(Math.floor(Math.random() * alphabet.length));
-            ctx.fillText(text, i * fontSize, drops[i] * fontSize);
-
-            if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) {
-                drops[i] = 0;
-            }
-            drops[i]++;
-        }
+    // 4. Анімація
+    function render() {
+        stars.forEach(s => {
+            s.z += isHyperdrive ? 55 : 5;
+            if (s.z > 1000) s.z = -1500;
+            
+            let stretch = isHyperdrive ? `scaleY(${25 + Math.random() * 25})` : 'scaleY(1)';
+            let x = s.xDir * (s.z + 1500) * 0.7;
+            let y = s.yDir * (s.z + 1500) * 0.7;
+            
+            s.el.style.transform = `translate3d(${x}px, ${y}px, ${s.z}px) rotate(${s.angle}deg) ${stretch}`;
+        });
+        if (container.parentNode) requestAnimationFrame(render);
     }
-    var matrixInterval = setInterval(draw, 33);
+    requestAnimationFrame(render);
 
-    // --- ЛОГІКА ТЕРМІНАЛУ ---
-    var logs = ["Wake up, Lampa...", "Bypassing protocols...", "Accessing TV core...", "System Ready."];
-    var currentLog = 0;
-    function showLogs() {
-        if (currentLog < logs.length) {
-            var p = document.createElement('div');
-            p.innerText = "> " + logs[currentLog];
-            document.getElementById('matrix-logs').appendChild(p);
-            currentLog++;
-            setTimeout(showLogs, 600);
-        }
-    }
-    showLogs();
-
-    var progress = 0;
-    var pb = document.getElementById('matrix-pb');
-    var timer = setInterval(function() {
-        progress += 2;
-        if (progress > 100) {
-            progress = 100;
-            clearInterval(timer);
+    // 5. Логіка завершення
+    setTimeout(() => {
+        isHyperdrive = true;
+        container.style.filter = 'blur(1px)';
+        
+        setTimeout(() => {
+            flash.classList.add('flash-active');
             setTimeout(() => {
-                container.style.transition = 'opacity 0.8s';
+                container.style.transition = 'opacity 0.6s ease-out';
                 container.style.opacity = '0';
-                setTimeout(() => {
-                    clearInterval(matrixInterval);
-                    container.remove();
-                }, 800);
-            }, 500);
-        }
-        pb.style.width = progress + '%';
-    }, 100);
+                setTimeout(() => container.remove(), 600);
+            }, 400);
+        }, 850);
+    }, 2800);
 })();
