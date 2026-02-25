@@ -73,7 +73,7 @@
     container.className = 'sw-container';
     var logo = document.createElement('div');
     logo.className = 'sw-logo';
-    logo.innerText = 'LAMPA';
+    logo.innerText = 'LAMPAS';
     var flash = document.createElement('div');
     flash.className = 'hyperspace-flash';
     
