@@ -32,18 +32,23 @@
     splash.innerHTML = '<div class="starwars-logo">LAMPA</div>';
     document.body.appendChild(splash);
 
-    // 3. Функція для програвання звуку (використовуємо зовнішнє посилання на ефект)
-    function playSaberSound() {
-        var audio = new Audio('https://www.soundboard.com/handler/DownLoadTrack.ashx?cliptoken=0f9a7101-7058-472e-8e47-49504543d83d'); 
-        // Альтернативне посилання на звук "Saber Ignite"
-        audio.volume = 0.5;
-        audio.play().catch(function(e) {
-            console.log("Браузер заблокував звук до першої взаємодії");
-        });
-    }
+    // Функція програвання при взаємодії
+function playSaberSound() {
+    var audio = new Audio('https://www.soundboard.com/handler/DownLoadTrack.ashx?cliptoken=0f9a7101-7058-472e-8e47-49504543d83d');
+    audio.volume = 0.4;
 
-    // Запускаємо звук через невелику затримку після появи лого
-    setTimeout(playSaberSound, 200);
+    var startPlay = function() {
+        audio.play().catch(e => console.log("Все ще заблоковано"));
+        // Видаляємо слухачі, щоб звук не повторювався при кожному кліку
+        window.removeEventListener('keydown', startPlay);
+        window.removeEventListener('click', startPlay);
+    };
+
+    window.addEventListener('keydown', startPlay);
+    window.addEventListener('click', startPlay);
+}
+
+playSaberSound();
 
     // 4. Прибираємо заставку
     setTimeout(function() {
