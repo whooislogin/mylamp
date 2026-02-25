@@ -1,48 +1,41 @@
 (function () {
-    // 1. Стилі для космосу та динамічних ефектів
+    // 1. Стилі: Чорний космос, золоте лого та ефекти спалаху
     var style = `
         .sw-container {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: black; z-index: 99999; 
+            background: #000; z-index: 99999; 
+            overflow: hidden; perspective: 1000px;
             display: flex; align-items: center; justify-content: center;
-            overflow: hidden; perspective: 600px;
         }
-
         .star {
-            position: absolute; background: white; border-radius: 50%;
-            opacity: 0.8; width: 2px; height: 2px;
-            will-change: transform, height;
+            position: absolute; background: white; border-radius: 1px;
+            width: 2px; height: 2px;
+            left: 50%; top: 50%;
+            will-change: transform;
         }
-
         .sw-logo {
+            position: relative; z-index: 10;
             font-family: 'Arial Black', sans-serif;
-            font-size: 8vw; font-weight: bold; color: #FFE81F;
+            font-size: 9vw; font-weight: bold; color: #FFE81F;
             text-shadow: 0 0 30px rgba(255, 232, 31, 0.9);
             transform: perspective(400px) rotateX(25deg);
-            letter-spacing: 12px; z-index: 10;
-            filter: blur(0px);
-            animation: logoMove 3.5s ease-in-out forwards;
+            letter-spacing: 15px;
+            animation: logoArrival 3.5s ease-in-out forwards;
         }
-
-        @keyframes logoMove {
+        @keyframes logoArrival {
             0% { opacity: 0; transform: perspective(400px) rotateX(25deg) scale(2.5); filter: blur(10px); }
             30% { opacity: 1; filter: blur(0px); }
             70% { opacity: 1; }
             100% { opacity: 0; transform: perspective(400px) rotateX(25deg) scale(0.4); }
         }
-
         .hyperspace-flash {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             background: white; opacity: 0; z-index: 100; pointer-events: none;
         }
-
-        .flash-active {
-            animation: flashAnim 0.7s ease-out forwards;
-        }
-
+        .flash-active { animation: flashAnim 0.8s ease-out forwards; }
         @keyframes flashAnim {
             0% { opacity: 0; }
-            40% { opacity: 1; }
+            50% { opacity: 1; }
             100% { opacity: 0; }
         }
     `;
@@ -51,7 +44,7 @@
     styleTag.innerHTML = style;
     document.head.appendChild(styleTag);
 
-    // 2. Створення елементів
+    // 2. Створення структури елементів
     var container = document.createElement('div');
     container.className = 'sw-container';
     
@@ -66,62 +59,69 @@
     container.appendChild(flash);
     document.body.appendChild(container);
 
-    // 3. Створення зірок
+    // 3. Ініціалізація зірок
     var stars = [];
-    var starCount = 120;
+    var starCount = 120; // Оптимально для TV
+    var isHyperdrive = false;
 
     for (let i = 0; i < starCount; i++) {
-        let star = document.createElement('div');
-        star.className = 'star';
+        let starEl = document.createElement('div');
+        starEl.className = 'star';
         
-        // Випадкові позиції
-        let x = Math.random() * 200 - 100;
-        let y = Math.random() * 200 - 100;
-        let z = Math.random() * 1000 - 1000;
-
-        star.dataset.x = x;
-        star.dataset.y = y;
-        star.dataset.z = z;
-
-        container.appendChild(star);
-        stars.push(star);
-    }
-
-    // 4. Анімація зірок
-    let isHyperdrive = false;
-
-    function animateStars() {
-        stars.forEach(star => {
-            let z = parseFloat(star.dataset.z);
-            z += isHyperdrive ? 40 : 5; // Якщо стрибок — швидкість зростає в 8 разів
-
-            if (z > 600) z = -1000;
-            
-            star.dataset.z = z;
-            
-            // Якщо гіперстрибок — додаємо scaleY (розтягування)
-            let stretch = isHyperdrive ? 'scaleY(50)' : 'scaleY(1)';
-            star.style.transform = `translate3d(${star.dataset.x}vw, ${star.dataset.y}vh, ${z}px) ${stretch}`;
+        // Математика напрямку: кут від центру на 360 градусів
+        let angle = Math.random() * Math.PI * 2;
+        let xDir = Math.cos(angle);
+        let yDir = Math.sin(angle);
+        
+        stars.push({
+            el: starEl,
+            xDir: xDir,
+            yDir: yDir,
+            z: Math.random() * -1500, // Глибина появи
+            angle: angle * (180 / Math.PI) + 90 // Поворот "носом" від центру
         });
         
-        if (container.parentNode) requestAnimationFrame(animateStars);
+        container.appendChild(starEl);
     }
-    requestAnimationFrame(animateStars);
 
-    // 5. Ефект Гіперстрибка
+    // 4. Цикл анімації (60 FPS)
+    function render() {
+        stars.forEach(s => {
+            // Збільшуємо швидкість під час гіперстрибка
+            s.z += isHyperdrive ? 50 : 5;
+            
+            // Якщо зірка пролетіла за "камеру", повертаємо її вглиб
+            if (s.z > 1000) s.z = -1500;
+
+            // Ефект розтягування: збільшуємо масштаб по осі Y (яка розгорнута від центру)
+            let stretch = isHyperdrive ? `scaleY(${25 + Math.random() * 20})` : 'scaleY(1)';
+            
+            // Розрахунок позиції (чим ближче Z, тим далі від центру x та y)
+            let x = s.xDir * (s.z + 1500) * 0.7;
+            let y = s.yDir * (s.z + 1500) * 0.7;
+
+            s.el.style.transform = `translate3d(${x}px, ${y}px, ${s.z}px) rotate(${s.angle}deg) ${stretch}`;
+        });
+
+        if (container.parentNode) {
+            requestAnimationFrame(render);
+        }
+    }
+    requestAnimationFrame(render);
+
+    // 5. Таймінги: Політ -> Стрибок -> Спалах -> Вихід
     setTimeout(() => {
-        isHyperdrive = true; // Вмикаємо розтягування в анімації
-        
-        // Додаємо легке розмиття для швидкості
-        container.style.filter = 'blur(1px)';
+        isHyperdrive = true; // Активуємо розтягування та прискорення
+        container.style.filter = 'blur(1px)'; // Додаємо розмиття швидкості
 
         setTimeout(() => {
-            flash.classList.add('flash-active');
+            flash.classList.add('flash-active'); // Білий спалах
+            
             setTimeout(() => {
-                container.style.transition = 'opacity 0.5s';
+                container.style.transition = 'opacity 0.6s ease-out';
                 container.style.opacity = '0';
-                setTimeout(() => container.remove(), 500);
-            }, 300);
-        }, 600); // Стрибок триває 0.6 сек
-
-    }, 2800);
+                setTimeout(() => container.remove(), 600); // Повне видалення
+            }, 400); // Видаляємо на піку спалаху
+        }, 800); // Тривалість самого стрибка
+    }, 2800); // Початок стрибка (синхронізовано зі зникненням лого)
+})();
